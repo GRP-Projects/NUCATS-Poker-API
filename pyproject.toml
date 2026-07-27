@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nucats_poker_api"
+authors = [
+    {name = "Gabriel Perry", email = "gabriel.reece.perry@outlook.com"}
+]
+description = "Poker API for the NUCATS AI Poker exercise"
+requires-python = ">=3.12"
+dependencies = [
+    "requests"
+]
