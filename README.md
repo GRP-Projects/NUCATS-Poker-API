@@ -24,9 +24,11 @@ poker API using the address of the server, port, and the bot username and passwo
 Interactions with the server are encapsulated within an API object under the class PokerInterface, so importing should look like
 ``from NUPokerAPI import PokerInterface``, and creating an object should look like
 ``Poker = PokerInterface(address = address, port = port, bot_name = bot_name, passcode = passcode)`` for a given
-registered bot name and passcode on the poker server.
+registered bot name and passcode registered with the poker server.
 
-|Function|Parameters|Description|
-|--------|----------|-----------|
-|init|address: str, port: int, bot_name: str, passcode:str| Initiates the Poker API by logging into and creating a session with the poker API server.|
-|login|N/A (uses credentials passed at object initialisation)|Used during object initialisation, but can be reinvoked if the session is disrupted.|
+|Function|Parameters|Returns|Description|
+|--------|----------|-------|-----------|
+|init|bot_name: str, passcode:str, address: str, port: int (default: 8080)|None|Initiates the Poker API by logging into and creating a session with the poker API server.|
+|login|None (uses credentials passed at object initialisation)|True if successful login, False if not.| Used during object initialisation, but can be reinvoked if the session is disrupted.|
+|enter_matchmaking|timeout: int (default: 30)|Match / Game ID (int) if successful in joining match, None if not|Attempts to enter matchmaking queue, if successful, wait until timeout for confirmation of start of game, querying every second.|
+|check_matchmaking|None|True, Game ID if in match. False, 0 if not in match. None, None if Exception.|Queries with poker server whether the bot is currently in a poker match|
