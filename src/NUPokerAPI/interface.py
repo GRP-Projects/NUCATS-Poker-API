@@ -60,8 +60,9 @@ class PokerInterface:
             if self._ping():
                 raise Exception(f"Could not access server {self.address}:{self.port}")
             data = json.dumps({"username": self.bot_name, "password": self.passcode})
-            login_request = requests.Request('POST', f"{self.address}:{self.port}/bot_login", data=data).prepare()
+            login_request = requests.Request('POST', f"{self.address}:{self.port}/bot_login", data=data)
             login_request.headers['Content-Type'] = 'application/json'
+            login_request = self.s.prepare_request(login_request)
             r = self.s.send(login_request, timeout=5)
             if r.status_code != 200:
                 raise Exception(f"Could not authenticate with poker server: Error {r.status_code}.")
@@ -91,7 +92,8 @@ class PokerInterface:
     def _matchmaking_request(self):
         # Attempts to enter matchmaking queue, if successful, return True. Else, return False.
         try:
-            queue_request = requests.Request('POST', f"{self.address}:{self.port}/enter_queue").prepare()
+            queue_request = requests.Request('POST', f"{self.address}:{self.port}/enter_queue")
+            queue_request = self.s.prepare_request(queue_request)
             r = self.s.send(queue_request, timeout=5)
             if r.status_code == 200:
                 return True
@@ -103,8 +105,9 @@ class PokerInterface:
     def check_matchmaking(self):
         # Checks to see whether match making has placed bot in match.
         try:
-            check_request = requests.Request("GET", f"{self.address}:{self.port}/query_queue").prepare()
+            check_request = requests.Request("GET", f"{self.address}:{self.port}/query_queue")
             check_request.headers['Content-Type'] = 'application/json'
+            check_request = self.s.prepare_request(check_request)
             r = self.s.send(check_request, timeout=5)
             if r.status_code != 200:
                 raise Exception(f"Contacted server, could not check matchmaking. Error: {r.status_code}")
