@@ -28,7 +28,7 @@ registered bot name and passcode registered with the poker server.
 
 |Function|Parameters|Returns|Description|
 |--------|----------|-------|-----------|
-|init|bot_name: str, passcode:str, address: str, port: int (default: 8080)|None|Initiates the Poker API by logging into and creating a session with the poker API server.|
+|init|bot_name: str, passcode: str, address: str, port: int (default: 8080)|None|Initiates the Poker API by logging into and creating a session with the poker API server.|
 |login|None (uses credentials passed at object initialisation)|True if successful login, False if not.| Used during object initialisation, but can be reinvoked if the session is disrupted.|
 |enter_matchmaking|timeout: int (default: 30)|Match / Game ID (int) if successful in joining match, None if not|Attempts to enter matchmaking queue, if successful, wait until timeout for confirmation of start of game, querying every second.|
 |check_matchmaking|None|True, Game ID if in match. False, 0 if not in match. None, None if Exception.|Queries with poker server whether the bot is currently in a poker match|
