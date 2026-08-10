@@ -1,9 +1,10 @@
 import json
 import os
-import requests
+from time import sleep
+
 import logging
 
-from time import sleep
+from websockets.sync.client import connect
 
 logger = logging.getLogger(__name__)
 
@@ -39,38 +40,38 @@ def card_to_string(card:int = -1):
     return f"{card_strings[card % 13]} of {suit_strings[card // 13]}"
 
 class PokerInterface:
-    def __init__(self, bot_name: str, passcode: str, address: str, port: int = 8080):
+    def __init__(self, bot_name: str, passcode: str, address: str):
 
-        if not ((address[:7] != "http://") ^ (address[:8] != "https://")):
-            raise Exception("Invalid address, please define https:// or http://")
+        if address[:5] != "ws://":
+            raise Exception("Invalid address, please define ws:// preceding server URI")
         
         self.address = address
-        self.port = port
-        self.bot_name=bot_name
-        self.passcode=passcode
-        self.s = requests.Session()
+        self.bot_name = bot_name
+        self.passcode = passcode
+
+        try:
+            self.s = connect(address)
+        except Exception as e:
+            raise Exception(f"Could not connect to poker server:\n{e}")
+        logger.info("Connected to poker server successfully.")
 
         while not self.login():
-            logger.error("Could not login, retrying in 5...")
+            logger.error("Retrying in 5 seconds...")
             sleep(5)
 
     def login(self):
         # Attempt server sign-in
+        data = json.dumps({"username": self.bot_name, "password": self.passcode})
         try:
-            if self._ping():
-                raise Exception(f"Could not access server {self.address}:{self.port}")
-            data = json.dumps({"username": self.bot_name, "password": self.passcode})
-            login_request = requests.Request('POST', f"{self.address}:{self.port}/bot_login", data=data)
-            login_request.headers['Content-Type'] = 'application/json'
-            login_request = self.s.prepare_request(login_request)
-            r = self.s.send(login_request, timeout=5)
-            if r.status_code != 200:
-                raise Exception(f"Could not authenticate with poker server: Error {r.status_code}.")
+            self.s.send(data)
+            response = json.loads(self.s.recv())
+            if response['login']:
+                return True
+            else:
+                logger.error(f'Could not log into poker server: {response['info']}')
+                return False
         except Exception as e:
-            logger.error(e)
-            return False
-        logger.info(f"Successfully connected and authenticated with server. Logged in as {self.bot_name}.")
-        return True
+            logger.error(f"Could not log into poker server:\n{e}")
 
     def enter_matchmaking(self, timeout: int = 30):
         # Tries to enter matchmaking queue, if successful, query for confirmation of game entry until timeout.
