@@ -11,6 +11,6 @@ authors = [
 description = "Poker API for the NUCATS AI Poker exercise"
 requires-python = ">=3.12"
 dependencies = [
-    "requests"
+    "requests",
     "websockets"
 ]
