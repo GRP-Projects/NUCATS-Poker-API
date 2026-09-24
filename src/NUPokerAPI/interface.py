@@ -39,6 +39,15 @@ def card_to_string(card:int = -1):
         return "Undefined"
     return f"{card_strings[card % 13]} of {suit_strings[card // 13]}"
 
+class Turn:
+    def __init__(self, river: list, cards: list, player: int, pot: int, play: int, raise_quantity: int):
+        self.river = river
+        self.cards = cards
+        self.player = player
+        self.pot = pot
+        self.play = play
+        self.raise_quantity = raise_quantity
+
 class PokerInterface:
     def __init__(self, api_key: str, address: str):
 
@@ -47,6 +56,10 @@ class PokerInterface:
         
         self.address = address
         self.api_key = api_key
+        self.in_game = False
+
+        self.turn_log = []
+        self.player_status = {}
 
         try:
             self.s = connect(address)
@@ -73,7 +86,7 @@ class PokerInterface:
         except Exception as e:
             logger.error(f"Could not log into poker server:\n{e}")
 
-    def enter_matchmaking(self, timeout: int = 30):
+    def enter_matchmaking(self):
         data = json.dumps({"type": "enter_matchmaking"})
         try:
             self.s.send(data)
@@ -84,6 +97,7 @@ class PokerInterface:
                 # Waits for confirmation that client is in game
                 response = json.loads(self.s.recv())
                 if response['success'] and response['status'] == 3:
+                    self.in_game = True
                     logger.info(f'{response['info']}')
                     return True
             else:
@@ -93,5 +107,39 @@ class PokerInterface:
             logger.error(e)
             return False
     
+    def await_turn(self):
+        if self.in_game:
+            while True:
+                message = json.loads(self.s.recv())
+                if not message['success']:
+                    logger.error(f"ERROR: {message['info']}")
+                    return False
+                elif message['type'] == 'game':
+                    match message['status']:
+                        case 3:
+                            played_turn = Turn(message['river'], message['cards'], message['player'],
+                            message['pot'], message['play'], message['raise_quantity'])
+                            self.turn_log.append(played_turn)
+                            continue
+                        case 4:
+                            del message['type']
+                            del message['status']
+                            del message['success']
+                            self.player_status = message
+
+                            # TODO: Check that play was valid
+
+                            return True
+    
+    def take_turn(self, play: int, raise_quantity: int = 0):
+        # play : fold = 0, call = 1, raise = 2.
+        if play == 2 and raise_quantity <= 0:
+            raise Exception(f"Cannot raise by {raise_quantity} chips.")
+        data = json.dumps({"type": "play", "play" : play, "raise_quantity" : raise_quantity})
+        self.s.send(data)
+    
     def close(self):
         self.s.close()
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
