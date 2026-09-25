@@ -108,12 +108,13 @@ class PokerInterface:
             return False
     
     def await_turn(self):
+        # Returns BOOL; BOOL [Is it your turn?; Is the game over?]
         if self.in_game:
             while True:
                 message = json.loads(self.s.recv())
                 if not message['success']:
                     logger.error(f"ERROR: {message['info']}")
-                    return False
+                    return False, False
                 elif message['type'] == 'game':
                     match message['status']:
                         case 3:
@@ -129,7 +130,11 @@ class PokerInterface:
 
                             # TODO: Check that play was valid
 
-                            return True
+                            return True, False
+                        case 5:
+                            # Game over, TODO: Tidy up
+                            logger.info(f"{message['info']}")
+                            return False, True
     
     def take_turn(self, play: int, raise_quantity: int = 0):
         # play : fold = 0, call = 1, raise = 2.
