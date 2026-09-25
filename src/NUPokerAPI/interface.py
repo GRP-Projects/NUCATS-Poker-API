@@ -114,7 +114,7 @@ class PokerInterface:
                 message = json.loads(self.s.recv())
                 if not message['success']:
                     logger.error(f"ERROR: {message['info']}")
-                    return False, False
+                    return True, False
                 elif message['type'] == 'game':
                     match message['status']:
                         case 3:
@@ -130,7 +130,7 @@ class PokerInterface:
 
                             # TODO: Check that play was valid
 
-                            return True, False
+                            return False, False
                         case 5:
                             # Game over, TODO: Tidy up
                             logger.info(f"{message['info']}")
