@@ -110,7 +110,7 @@ class PokerInterface:
                     match message['status']:
                         case 3:
                             # Someone else's turn has been played; log actions.
-                            played_turn = {message['player'], message['pot'], message['play'], message['raise_quantity']}
+                            played_turn = {message['player'], message['pot'], message['play'], message['current_bet']}
                             self.turn_log.append(played_turn)
                             continue
                         case 4:
@@ -129,13 +129,22 @@ class PokerInterface:
 
                             logger.info(f"{message['info']}")
                             return False, True
+                        case _:
+                            # Server wasn't expecting this.
+                            logger.error("Bad response recieved from server.")
+                            self.in_game = False
+                            return False, True
+        logger.error("You're not currently in a game.")
+        return False, True
     
     def take_turn(self, play: int, raise_quantity: int = 0):
-        # play : fold = 0, call = 1, raise = 2.
-        if play == 2 and raise_quantity <= 0:
-            raise Exception(f"Cannot raise by {raise_quantity} chips.")
-        data = json.dumps({"type": "play", "play" : play, "raise_quantity" : raise_quantity})
-        self.s.send(data)
+        if self.in_game:
+            # play : fold = 0, call = 1, raise = 2.
+            if play == 2 and raise_quantity <= 0:
+                raise Exception(f"Cannot raise by {raise_quantity} chips.")
+            data = json.dumps({"type": "play", "play" : play, "raise_quantity" : raise_quantity})
+            self.s.send(data)
+        logger.info("Not in game.")
     
     # Quality of life - fold wrapper around take_turn method.
     def fold(self):
