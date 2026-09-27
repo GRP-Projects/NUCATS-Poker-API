@@ -39,15 +39,6 @@ def card_to_string(card:int = -1):
         return "Undefined"
     return f"{card_strings[card % 13]} of {suit_strings[card // 13]}"
 
-class Turn:
-    def __init__(self, river: list, cards: list, player: int, pot: int, play: int, raise_quantity: int):
-        self.river = river
-        self.cards = cards
-        self.player = player
-        self.pot = pot
-        self.play = play
-        self.raise_quantity = raise_quantity
-
 class PokerInterface:
     def __init__(self, api_key: str, address: str):
 
@@ -56,8 +47,8 @@ class PokerInterface:
         
         self.address = address
         self.api_key = api_key
-        self.in_game = False
 
+        self.in_game = False
         self.turn_log = []
         self.player_status = {}
 
@@ -118,21 +109,24 @@ class PokerInterface:
                 elif message['type'] == 'game':
                     match message['status']:
                         case 3:
-                            played_turn = Turn(message['river'], message['cards'], message['player'],
-                            message['pot'], message['play'], message['raise_quantity'])
+                            # Someone else's turn has been played; log actions.
+                            played_turn = {message['player'], message['pot'], message['play'], message['raise_quantity']}
                             self.turn_log.append(played_turn)
                             continue
                         case 4:
+                            # Your turn: process status message and signal to parent
                             del message['type']
                             del message['status']
                             del message['success']
                             self.player_status = message
 
-                            # TODO: Check that play was valid
-
                             return False, False
                         case 5:
-                            # Game over, TODO: Tidy up
+                            # Tidy up:
+                            self.in_game = False
+                            self.turn_log = []
+                            self.player_status = {}
+
                             logger.info(f"{message['info']}")
                             return False, True
     
@@ -142,6 +136,49 @@ class PokerInterface:
             raise Exception(f"Cannot raise by {raise_quantity} chips.")
         data = json.dumps({"type": "play", "play" : play, "raise_quantity" : raise_quantity})
         self.s.send(data)
+    
+    # Quality of life - fold wrapper around take_turn method.
+    def fold(self):
+        self.take_turn(0)
+    
+    # Quality of life - call wrapper around take_turn method.
+    def call(self):
+        self.take_turn(1)
+    
+    # Quality of life - raise wrapper around take_turn method.
+    def bump(self, raise_quantity: int):
+        self.take_turn(2, raise_quantity)
+
+    # Quality of life - gets for status attributes:
+    def get_cards(self):
+        if not 'cards' in self.player_status:
+            return None
+        return self.player_status['cards']
+    
+    def get_bet(self):
+        if not 'bet' in self.player_status:
+            return None
+        return self.player_status['bet']
+    
+    def get_money(self):
+        if not 'money' in self.player_status:
+            return None
+        return self.player_status['money']
+
+    def get_folded(self):
+        if not 'folded' in self.player_status:
+            return None
+        return self.player_status['folded']
+
+    def get_river(self):
+        if not 'river' in self.player_status:
+            return None
+        return self.player_status['river']
+
+    def get_strength(self):
+        if not 'hand_strength' in self.player_status:
+            return None
+        return self.player_status['hand_strength']
     
     def close(self):
         self.s.close()
