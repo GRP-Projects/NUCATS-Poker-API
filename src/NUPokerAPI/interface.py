@@ -40,8 +40,11 @@ def card_to_string(card:int = -1):
     return f"{card_strings[card % 13]} of {suit_strings[card // 13]}"
 
 class PokerInterface:
-    def __init__(self, api_key: str, address: str):
+    def __init__(self, api_key: str, address: str, info: bool):
 
+        if info:
+            logging.basicConfig(level=logging.INFO)
+        
         if address[:5] != "ws://":
             raise Exception("Invalid address, please define ws:// preceding server URI")
         
@@ -112,6 +115,7 @@ class PokerInterface:
                             # Someone else's turn has been played; log actions.
                             played_turn = {message['player'], message['pot'], message['play'], message['current_bet']}
                             self.turn_log.append(played_turn)
+                            logger.info(f"Player {message['player']} {message['play']}. Pot is {message['pot']}, and current bet is {message['current_bet']}.")
                             continue
                         case 4:
                             # Your turn: process status message and signal to parent
@@ -140,11 +144,12 @@ class PokerInterface:
     def take_turn(self, play: int, raise_quantity: int = 0):
         if self.in_game:
             # play : fold = 0, call = 1, raise = 2.
-            if play == 2 and raise_quantity <= 0:
+            if play == 2 and raise_quantity < self.get_minimum_bet():
                 raise Exception(f"Cannot raise by {raise_quantity} chips.")
             data = json.dumps({"type": "play", "play" : play, "raise_quantity" : raise_quantity})
             self.s.send(data)
-        logger.info("Not in game.")
+        else:
+            logger.info("You're not currently in a game.")
     
     # Quality of life - fold wrapper around take_turn method.
     def fold(self):
@@ -188,6 +193,13 @@ class PokerInterface:
         if not 'hand_strength' in self.player_status:
             return None
         return self.player_status['hand_strength']
+    
+    def get_minimum_bet(self):
+        if not 'minimum_bet' in self.player_status:
+            return None
+        if self.player_status['minimum_bet']==0:
+            return 1
+        return self.player_status['minimum_bet']
     
     def close(self):
         self.s.close()
